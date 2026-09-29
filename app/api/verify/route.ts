@@ -56,7 +56,7 @@ async function verifySignedPdf(pdf: Buffer, externalPayload: unknown, expectedPu
   const suppliedPayload = externalPayload && typeof externalPayload === "object" ? externalPayload : scannedPayload ?? embeddedPayload;
   const qrMatchesPdf = stableJson(suppliedPayload) === stableJson(embeddedPayload);
   const visualQrScanned = Boolean(scannedPayload && stableJson(scannedPayload) === stableJson(embeddedPayload));
-  const metadataValid = embeddedPayload.app === "SignVerify"
+  const metadataValid = embeddedPayload.app === "Verisign"
     && embeddedPayload.algorithm === "RSA-PSS-2048-SHA256"
     && embeddedPayload.fingerprint === getFingerprint(signature.publicKeyPem)
     && verifyData(qrSigningData(embeddedPayload), embeddedPayload.metadataSignature, signature.publicKeyPem);

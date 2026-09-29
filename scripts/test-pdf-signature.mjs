@@ -19,7 +19,7 @@ async function request(path, body) {
 const pdf = await PDFDocument.create();
 const page = pdf.addPage([612, 792]);
 const font = await pdf.embedFont(StandardFonts.Helvetica);
-page.drawText("SignVerify automated PDF signature test", { x: 48, y: 720, size: 18, font });
+page.drawText("Verisign automated PDF signature test", { x: 48, y: 720, size: 18, font });
 const sourcePdf = new Uint8Array(await pdf.save());
 const keys = await generateBrowserKeyPair();
 assert.equal(keys.privateKey.extractable, false, "Private key must be non-exportable");

@@ -13,7 +13,7 @@ export async function GET() {
     const sampleDocument = await PDFDocument.create();
     const samplePage = sampleDocument.addPage([612, 792]);
     const sampleFont = await sampleDocument.embedFont(StandardFonts.Helvetica);
-    samplePage.drawText("SignVerify 30-trial benchmark document", { x: 48, y: 720, size: 18, font: sampleFont });
+    samplePage.drawText("Verisign 30-trial benchmark document", { x: 48, y: 720, size: 18, font: sampleFont });
     const pdf = Buffer.from(await sampleDocument.save());
     const hash = computeSHA256(pdf);
     const { publicKey, privateKey } = generateRSAKeyPair();
@@ -46,7 +46,7 @@ export async function GET() {
     const signedResult = await signPdfInBrowser(new Uint8Array(pdf), benchmarkKeys, {
       signerName: "Benchmark Signer",
       signerTitle: "Automated Tester",
-      institution: "SignVerify Benchmark",
+      institution: "Verisign Benchmark",
       documentName: "benchmark.pdf",
       additionalSigners: [],
       verifyBaseUrl: "http://localhost",

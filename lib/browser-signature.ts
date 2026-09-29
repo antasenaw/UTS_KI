@@ -106,7 +106,7 @@ async function createSessionCertificate(publicKey: CryptoKey, privateKey: Crypto
   certificate.serialNumber = new asn1js.Integer({ value: Date.now() });
   const commonName = new pkijs.AttributeTypeAndValue({
     type: "2.5.4.3",
-    value: new asn1js.Utf8String({ value: "SignVerify Session" }),
+    value: new asn1js.Utf8String({ value: "Verisign Session" }),
   });
   certificate.issuer.typesAndValues.push(commonName);
   certificate.subject.typesAndValues.push(new pkijs.AttributeTypeAndValue({ type: commonName.type, value: commonName.value }));
@@ -181,12 +181,12 @@ async function finalizePdf(preparedPdf: Uint8Array, createSignature: (bytes: Uin
 }
 
 export async function signPdfInBrowser(sourcePdf: Uint8Array, keys: BrowserKeyPair, input: SignerInput): Promise<BrowserSigningResult> {
-  const cryptoEngine = new pkijs.CryptoEngine({ name: "SignVerifyBrowser", crypto: crypto as Crypto });
+  const cryptoEngine = new pkijs.CryptoEngine({ name: "VerisignBrowser", crypto: crypto as Crypto });
   const sourceHash = hex(new Uint8Array(await crypto.subtle.digest("SHA-256", toArrayBuffer(sourcePdf))));
   const documentId = crypto.randomUUID();
   const signedAt = new Date().toISOString();
   const metadata = {
-    app: "SignVerify",
+    app: "Verisign",
     documentId,
     documentName: input.documentName.trim() || "document.pdf",
     signerName: input.signerName.trim(),
@@ -220,7 +220,7 @@ export async function signPdfInBrowser(sourcePdf: Uint8Array, keys: BrowserKeyPa
   const margin = 42;
   const qrSize = Math.min(200, pageWidth * 0.39, pageHeight * 0.31);
   const qrImage = await pdfDocument.embedPng(qrPng);
-  signaturePage.drawText("SignVerify", { x: margin, y: pageHeight - 58, size: 17, font: boldFont, color: rgb(0.06, 0.16, 0.26) });
+  signaturePage.drawText("Verisign", { x: margin, y: pageHeight - 58, size: 17, font: boldFont, color: rgb(0.06, 0.16, 0.26) });
   signaturePage.drawText("DIGITAL SIGNATURE RECORD", { x: margin, y: pageHeight - 78, size: 8, font: boldFont, color: rgb(0.08, 0.48, 0.53) });
   const fields = [
     ["Signer", input.signerName],
@@ -244,7 +244,7 @@ export async function signPdfInBrowser(sourcePdf: Uint8Array, keys: BrowserKeyPa
   signaturePage.drawImage(qrImage, { x: qrX, y: qrY, width: qrSize, height: qrSize });
   signaturePage.drawText("SCAN TO VERIFY", { x: qrX, y: qrY - 15, size: 7, font: boldFont, color: rgb(0.06, 0.42, 0.49) });
 
-  const reason = `SignVerify1:${toBase64Url(encoder.encode(payloadJson))}`;
+  const reason = `Verisign1:${toBase64Url(encoder.encode(payloadJson))}`;
   pdflibAddPlaceholder({
     pdfDoc: pdfDocument,
     pdfPage: signaturePage,
@@ -256,7 +256,7 @@ export async function signPdfInBrowser(sourcePdf: Uint8Array, keys: BrowserKeyPa
     signatureLength: 4096,
     subFilter: "ETSI.CAdES.detached",
     widgetRect: [0, 0, 0, 0],
-    appName: "SignVerify",
+    appName: "Verisign",
   });
 
   const preparedPdf = await pdfDocument.save({ useObjectStreams: false, updateFieldAppearances: false });

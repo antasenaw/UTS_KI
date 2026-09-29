@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SignVerify | Digital Trust",
+  title: "Verisign | Digital Trust",
   description: "Sign and verify PDF documents with RSA-PSS digital signatures.",
 };
 

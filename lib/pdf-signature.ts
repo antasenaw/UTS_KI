@@ -8,8 +8,8 @@ import * as pkijs from "pkijs";
 
 const SHA256_OID = "2.16.840.1.101.3.4.2.1";
 const RSA_PSS_OID = "1.2.840.113549.1.1.10";
-const cryptoEngine = new pkijs.CryptoEngine({ name: "signverify-node", crypto: webcrypto as unknown as Crypto });
-pkijs.setEngine("signverify-node", cryptoEngine);
+const cryptoEngine = new pkijs.CryptoEngine({ name: "Verisign-node", crypto: webcrypto as unknown as Crypto });
+pkijs.setEngine("Verisign-node", cryptoEngine);
 
 function toArrayBuffer(value: Uint8Array): ArrayBuffer {
   return value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength) as ArrayBuffer;
@@ -56,7 +56,7 @@ export async function verifyPdfByteRange(pdfBuffer: Buffer): Promise<{ valid: bo
 
 export function getSignedQrPayload(pdfBuffer: Buffer): string {
   const pdfText = pdfBuffer.toString("latin1");
-  const match = /\/Reason\s*\(SignVerify1:([A-Za-z0-9_-]+)\)/.exec(pdfText);
+  const match = /\/Reason\s*\(Verisign1:([A-Za-z0-9_-]+)\)/.exec(pdfText);
   if (!match) throw new Error("Signed QR payload was not found in the PDF signature dictionary.");
   return Buffer.from(match[1], "base64url").toString("utf8");
 }
@@ -78,7 +78,7 @@ export async function scanPdfQrPayload(pdfBuffer: Buffer): Promise<string> {
     await page.render({ canvas: canvas as unknown as HTMLCanvasElement, viewport, annotationMode: 0 }).promise;
     const image = context.getImageData(0, 0, canvas.width, canvas.height);
     const result = jsQR(image.data, image.width, image.height, { inversionAttempts: "attemptBoth" });
-    if (!result || !result.data.startsWith("SV1:")) throw new Error("No scannable SignVerify QR was found on the final PDF page.");
+    if (!result || !result.data.startsWith("SV1:")) throw new Error("No scannable Verisign QR was found on the final PDF page.");
     return inflateSync(Buffer.from(result.data.slice(4), "base64url")).toString("utf8");
   } finally {
     void loadingTask.destroy();

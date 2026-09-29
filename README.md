@@ -1,6 +1,6 @@
-# SignVerify
+# Verisign
 
-SignVerify adalah demo tanda tangan digital PDF. Aplikasi menggunakan RSA 2048-bit dengan RSA-PSS dan SHA-256, menambahkan halaman QR visual, lalu menandatangani PDF final dengan CMS `/ByteRange`.
+Verisign adalah demo tanda tangan digital PDF. Aplikasi menggunakan RSA 2048-bit dengan RSA-PSS dan SHA-256, menambahkan halaman QR visual, lalu menandatangani PDF final dengan CMS `/ByteRange`.
 
 ## Menjalankan
 
