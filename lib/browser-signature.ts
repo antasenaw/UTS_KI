@@ -203,9 +203,9 @@ export async function signPdfInBrowser(sourcePdf: Uint8Array, keys: BrowserKeyPa
   const payloadJson = JSON.stringify(payload);
   const qrText = `SV1:${toBase64Url(deflate(encoder.encode(payloadJson)))}`;
   const qrCode = await QRCode.toDataURL(qrText, {
-    width: 640,
+    width: 800,
     margin: 4,
-    errorCorrectionLevel: "Q",
+    errorCorrectionLevel: "M",
     color: { dark: "#102a43", light: "#ffffff" },
   });
   const qrPng = new Uint8Array(await (await fetch(qrCode)).arrayBuffer());
@@ -213,36 +213,58 @@ export async function signPdfInBrowser(sourcePdf: Uint8Array, keys: BrowserKeyPa
   const pdfDocument = await PDFDocument.load(sourcePdf, { updateMetadata: false });
   const sourcePageSize = pdfDocument.getPages()[0]?.getSize();
   const pageWidth = sourcePageSize && sourcePageSize.width >= 420 ? sourcePageSize.width : 595.28;
-  const pageHeight = sourcePageSize && sourcePageSize.height >= 420 ? sourcePageSize.height : 841.89;
-  const signaturePage = pdfDocument.addPage([pageWidth, pageHeight]);
   const font = await pdfDocument.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDocument.embedFont(StandardFonts.HelveticaBold);
   const margin = 42;
-  const qrSize = Math.min(200, pageWidth * 0.39, pageHeight * 0.31);
+  const qrSize = Math.min(480, pageWidth - margin * 2);
   const qrImage = await pdfDocument.embedPng(qrPng);
-  signaturePage.drawText("Verisign", { x: margin, y: pageHeight - 58, size: 17, font: boldFont, color: rgb(0.06, 0.16, 0.26) });
-  signaturePage.drawText("DIGITAL SIGNATURE RECORD", { x: margin, y: pageHeight - 78, size: 8, font: boldFont, color: rgb(0.08, 0.48, 0.53) });
-  const fields = [
-    ["Signer", input.signerName],
-    ["Title", input.signerTitle],
-    ["Institution", input.institution],
+  const signers = [
+    { name: input.signerName, title: input.signerTitle },
+    ...input.additionalSigners.filter((signer) => signer.name.trim() || signer.title.trim()),
+  ];
+  const fields: [string, string][] = [
     ["Signed at (UTC)", signedAt],
     ["Document ID", documentId],
     ["Source SHA-256", sourceHash],
     ["Key fingerprint", keys.fingerprint],
     ["Algorithm", "RSA-PSS / SHA-256 / 2048-bit"],
   ];
-  let fieldY = pageHeight - 112;
+  const signerRowCount = Math.ceil(signers.length / 2);
+  const signerRowHeight = 112;
+  const basePageHeight = sourcePageSize && sourcePageSize.height >= 420 ? sourcePageSize.height : 841.89;
+  const pageHeight = Math.max(basePageHeight, margin * 2 + 112 + signerRowCount * signerRowHeight + 24 + fields.length * 34 + 28 + qrSize + 15);
+  const signaturePage = pdfDocument.addPage([pageWidth, pageHeight]);
+  signaturePage.drawText("Verisign", { x: margin, y: pageHeight - 58, size: 17, font: boldFont, color: rgb(0.06, 0.16, 0.26) });
+  signaturePage.drawText("DIGITAL SIGNATURE RECORD", { x: margin, y: pageHeight - 78, size: 8, font: boldFont, color: rgb(0.08, 0.48, 0.53) });
+  const signerGap = 24;
+  const signerColumnWidth = (pageWidth - margin * 2 - signerGap) / 2;
+  for (const [index, signer] of signers.entries()) {
+    const column = index % 2;
+    const row = Math.floor(index / 2);
+    const signerX = margin + column * (signerColumnWidth + signerGap);
+    const signerY = pageHeight - 112 - row * signerRowHeight;
+    const signerFields: [string, string][] = [
+      [`Signer ${index + 1}`, signer.name],
+      ["Title", signer.title],
+      ["Institution", input.institution],
+    ];
+    signerFields.forEach(([label, value], fieldIndex) => {
+      const labelY = signerY - fieldIndex * 34;
+      signaturePage.drawText(label.toUpperCase(), { x: signerX, y: labelY, size: 6.5, font: boldFont, color: rgb(0.35, 0.48, 0.56) });
+      signaturePage.drawText(safePdfText(value), { x: signerX, y: labelY - 12, size: 8.5, font, color: rgb(0.06, 0.16, 0.26), maxWidth: signerColumnWidth });
+    });
+  }
+  let fieldY = pageHeight - 112 - signerRowCount * signerRowHeight - 24;
   for (const [label, value] of fields) {
     signaturePage.drawText(label.toUpperCase(), { x: margin, y: fieldY, size: 6.5, font: boldFont, color: rgb(0.35, 0.48, 0.56) });
-    signaturePage.drawText(safePdfText(value), { x: margin, y: fieldY - 12, size: 8.5, font, color: rgb(0.06, 0.16, 0.26), maxWidth: pageWidth - qrSize - margin * 3 });
+    signaturePage.drawText(safePdfText(value), { x: margin, y: fieldY - 12, size: 8.5, font, color: rgb(0.06, 0.16, 0.26), maxWidth: pageWidth - margin * 2 });
     fieldY -= 34;
   }
-  const qrX = pageWidth - qrSize - margin;
-  const recordCenterY = pageHeight - 112 - fields.length * 34 / 2;
-  const qrY = recordCenterY - qrSize / 2;
+  const qrX = (pageWidth - qrSize) / 2;
+  const qrY = fieldY - 28 - qrSize;
   signaturePage.drawImage(qrImage, { x: qrX, y: qrY, width: qrSize, height: qrSize });
-  signaturePage.drawText("SCAN TO VERIFY", { x: qrX, y: qrY - 15, size: 7, font: boldFont, color: rgb(0.06, 0.42, 0.49) });
+  const qrCaption = "SCAN TO VERIFY";
+  signaturePage.drawText(qrCaption, { x: (pageWidth - boldFont.widthOfTextAtSize(qrCaption, 7)) / 2, y: qrY - 15, size: 7, font: boldFont, color: rgb(0.06, 0.42, 0.49) });
 
   const reason = `Verisign1:${toBase64Url(encoder.encode(payloadJson))}`;
   pdflibAddPlaceholder({

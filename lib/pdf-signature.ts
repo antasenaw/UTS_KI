@@ -71,13 +71,17 @@ export async function scanPdfQrPayload(pdfBuffer: Buffer): Promise<string> {
   try {
     const page = await pdf.getPage(pdf.numPages);
     const naturalSize = page.getViewport({ scale: 1 });
-    const scale = Math.min(4, 2400 / Math.max(naturalSize.width, naturalSize.height));
-    const viewport = page.getViewport({ scale });
-    const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
-    const context = canvas.getContext("2d");
-    await page.render({ canvas: canvas as unknown as HTMLCanvasElement, viewport, annotationMode: 0 }).promise;
-    const image = context.getImageData(0, 0, canvas.width, canvas.height);
-    const result = jsQR(image.data, image.width, image.height, { inversionAttempts: "attemptBoth" });
+    const initialScale = Math.min(4, 2400 / Math.max(naturalSize.width, naturalSize.height));
+    async function scanAtScale(scale: number) {
+      const viewport = page.getViewport({ scale });
+      const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+      const context = canvas.getContext("2d");
+      await page.render({ canvas: canvas as unknown as HTMLCanvasElement, viewport, annotationMode: 0 }).promise;
+      const image = context.getImageData(0, 0, canvas.width, canvas.height);
+      return jsQR(image.data, image.width, image.height, { inversionAttempts: "attemptBoth" });
+    }
+    const result = await scanAtScale(initialScale)
+      ?? (initialScale < 4 ? await scanAtScale(4) : null);
     if (!result || !result.data.startsWith("SV1:")) throw new Error("No scannable Verisign QR was found on the final PDF page.");
     return inflateSync(Buffer.from(result.data.slice(4), "base64url")).toString("utf8");
   } finally {

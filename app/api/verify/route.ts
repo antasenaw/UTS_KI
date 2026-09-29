@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     if (data.length > Math.ceil(MAX_PDF_BYTES / 3) * 4) return Response.json({ error: "PDF exceeds the 25 MB verification limit." }, { status: 413 });
     const pdf = Buffer.from(data, "base64");
     if (pdf.byteLength > MAX_PDF_BYTES) return Response.json({ error: "PDF exceeds the 25 MB verification limit." }, { status: 413 });
-    if (pdf.subarray(0, 5).toString("ascii") !== "%PDF-") return Response.json({ error: "Only PDF files can be verified." }, { status: 400 });
+    if (!pdf.subarray(0, 1024).toString("latin1").includes("%PDF-")) return Response.json({ error: "Only PDF files can be verified." }, { status: 400 });
     if (qrPayload || !publicKey || !signature) return Response.json(await verifySignedPdf(pdf, qrPayload, publicKey));
     const hash = computeSHA256(pdf);
     return Response.json({ valid: verifyData(hash, signature, publicKey), hash, fingerprint: getFingerprint(publicKey) });
