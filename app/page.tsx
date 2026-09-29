@@ -81,7 +81,9 @@ const decodeQrData = (value: string) => {
 async function scanQrFromPdf(file: File, reportProgress: (message: string) => void = () => {}): Promise<QrPayload> {
   reportProgress("Rendering the final PDF page and scanning its QR...");
   const result = await request<Verification & { qrPayload?: QrPayload }>("/api/verify", { data: toBase64(await file.arrayBuffer()) });
-  if (!result.visualQrScanned || !result.qrPayload) throw new Error("No readable Verisign QR was found in this PDF.");
+  if (!result.visualQrScanned || !result.qrPayload) {
+    throw new Error(result.qrScanError ? `QR scan failed: ${result.qrScanError}` : "No readable Verisign QR was found in this PDF.");
+  }
   return result.qrPayload;
 }
 

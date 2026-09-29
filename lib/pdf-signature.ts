@@ -1,6 +1,7 @@
 import { createPublicKey, webcrypto } from "node:crypto";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
+import { createCanvas } from "@napi-rs/canvas";
 import jsQR from "jsqr";
 import { inflateSync } from "node:zlib";
 import * as asn1js from "asn1js";
@@ -63,7 +64,6 @@ export function getSignedQrPayload(pdfBuffer: Buffer): string {
 
 export async function scanPdfQrPayload(pdfBuffer: Buffer): Promise<string> {
   const loadNativeCanvas = createRequire(`${process.cwd()}/package.json`);
-  const { createCanvas } = loadNativeCanvas("@napi-rs/canvas") as typeof import("@napi-rs/canvas");
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(loadNativeCanvas.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs")).href;
   const loadingTask = pdfjs.getDocument({ data: new Uint8Array(pdfBuffer), useSystemFonts: true });
