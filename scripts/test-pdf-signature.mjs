@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { PDFDocument, StandardFonts } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { generateBrowserKeyPair } from "../lib/browser-keys.ts";
 import { signPdfInBrowser } from "../lib/browser-signature.ts";
 
@@ -61,6 +61,22 @@ assert.equal(valid.pdfSignatureValid, true, "G: CMS PDF signature must parse and
 assert.equal(valid.visualQrScanned, true, "H: QR must decode from rendered PDF pixels");
 assert.ok(valid.qrPayload, "Verifier must return the scanned QR payload");
 
+const modifiedPdfDocument = await PDFDocument.load(signedPdf);
+const modifiedPage = modifiedPdfDocument.getPages()[0];
+modifiedPage.drawText("TEST MODIFIED: TAMPER TEST", {
+  x: 28,
+  y: modifiedPage.getHeight() - 42,
+  size: 12,
+  font: await modifiedPdfDocument.embedFont(StandardFonts.HelveticaBold),
+  color: rgb(0.72, 0.12, 0.12),
+});
+const modifiedPdf = Buffer.from(await modifiedPdfDocument.save({ useObjectStreams: false }));
+const modifiedResult = await request("/api/verify", { data: modifiedPdf.toString("base64") });
+assert.equal(modifiedResult.valid, false, "A visibly modified demo PDF must remain invalid");
+assert.equal(modifiedResult.pdfSignatureValid, false, "A modified demo PDF must fail ByteRange validation");
+assert.equal(modifiedResult.visualQrScanned, true, "A modified demo PDF must still have a readable visual QR");
+assert.equal(modifiedResult.qrMatchesPdf, true, "The preserved visual QR should match the embedded payload");
+
 const byteTamper = Buffer.from(signedPdf);
 byteTamper[10] ^= 1;
 const byteTamperResult = await request("/api/verify", { data: byteTamper.toString("base64") });
@@ -101,6 +117,7 @@ console.log(JSON.stringify({
     changedQrRejected: !changedQrResult.valid,
     pdfParsedAndRendered: valid.pdfSignatureValid && valid.visualQrScanned,
     qrDecodedFromPdfPixels: valid.visualQrScanned,
+    modifiedDemoPdfStillScansQr: modifiedResult.visualQrScanned,
   },
   measurements: {
     sourcePdfBytes: signed.sourceSize,
